@@ -7,14 +7,17 @@ class companies:
     header = '| Название | Сайт | Электронная почта | Есть ли практика для студентов |'
 class filiations:
     name = 'filiations'
-    header = '| ID филиала | Город |'
+    header = '| ID филиала | Название компании | Город |'
 class vacancies:
     name = 'vacancies'
-    header = '''|    ID    |  Вакансия   | Название |   ID    | Занятость | Зарплата | Опыт работы |
-| вакансии | (профессия) | компании | филиала |           |          |             |'''
+    header = '''|    ID    |  Вакансия   |   ID    | Занятость | Зарплата | Опыт работы |
+| вакансии | (профессия) | филиала |           |          |             |'''
 class resumes:
     name = 'resumes'
-    header = '| ID резюме | Имя | Фамилия | Телефон | Город | Статус | Профессия | Опыт работы | Занятость | Нужна ли практика |'
+    header = '| ID резюме | Логин соискателя | Профессия | Опыт работы | Занятость | Нужна ли практика |'
+class users:
+    name = 'users'
+    header = '| Логин | Имя | Фамилия | Телефон | Город | Статус |'
 
 def create_tables(conn):
     try:
@@ -22,36 +25,43 @@ def create_tables(conn):
         conn.commit()
         conn.execute('''CREATE TABLE IF NOT EXISTS companies
                         (name TEXT PRIMARY KEY,
+                        password CHAR(8) NOT NULL,
                         site TEXT NOT NULL,
                         email TEXT NOT NULL,
                         practice TEXT NOT NULL)''')
         conn.commit()
         conn.execute('''CREATE TABLE IF NOT EXISTS filiations
                         (id INTEGER PRIMARY KEY,
-                        city TEXT NOT NULL)''')
+                        nameOfComp TEXT NOT NULL,
+                        city TEXT NOT NULL,
+                        FOREIGN KEY (nameOfComp) REFERENCES companies(name) ON UPDATE CASCADE ON DELETE CASCADE)''')
         conn.commit()
         conn.execute('''CREATE TABLE IF NOT EXISTS vacancies
-                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        (id INTEGER PRIMARY KEY,
                         name TEXT NOT NULL,
-                        nameOfComp TEXT NOT NULL,
                         idOfFil INTEGER NOT NULL,
                         employment TEXT,
                         pay INTEGER,
                         experience TEXT,
-                        FOREIGN KEY (nameOfComp) REFERENCES companies(name) ON UPDATE CASCADE ON DELETE CASCADE,
                         FOREIGN KEY (idOfFil) REFERENCES filiations(id) ON UPDATE CASCADE ON DELETE CASCADE)''')
         conn.commit()
-        conn.execute('''CREATE TABLE IF NOT EXISTS resumes
-                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conn.execute('''CREATE TABLE IF NOT EXISTS users
+                        (login TEXT PRIMARY KEY,
+                        password CHAR(8) NOT NULL,
                         fname TEXT NOT NULL,
-                        sname TEXT NOT NULL,
-                        phone TEXT NOT NULL,
+                        lname TEXT NOT NULL,
+                        phone CHAR(11) NOT NULL,
                         city TEXT,
-                        status TEXT,
-                        profession TEXT,
+                        status TEXT)''')
+        conn.commit()
+        conn.execute('''CREATE TABLE IF NOT EXISTS resumes
+                        (id INTEGER PRIMARY KEY,
+                        login TEXT NOT NULL
+                        profession TEXT NOT NULL,
                         experience TEXT,
                         employment TEXT,
-                        practice TEXT)''')
+                        practice TEXT
+                        FOREIGN KEY (login) REFERENCES users(login) ON UPDATE CASCADE ON DELETE CASCADE)''')
         conn.commit()
         return True
     except sqlite3.Error as e:
