@@ -22,7 +22,7 @@ class MyHTTPServer:
                 try:
                     self.serve_client(conn)
                 except Exception as e:
-                    print('Client serving failed', e)
+                    print('Client serving failed:', e)
         finally:
             sock.close()
     
@@ -60,7 +60,7 @@ class MyHTTPServer:
         reqLine = reqLine.rstrip('\r\n')
         words = reqLine.split()
         if len(words) != 3:
-            raise HTTPError(400, 'Bad request','Malformed request line')
+            raise HTTPError(400, 'Bad request', 'Malformed request line')
         
         method, target, ver = words
         if ver != 'HTTP/1.1':
@@ -83,11 +83,8 @@ class MyHTTPServer:
         return Parser().parsestr(sheaders)
     
     def handle_request(self, req):
-        # обработка запросов
-        if req.path == '/users' and req.method == 'GET':
-            return self.handle_get_users(req)
-        
-        # если ничего не вернулось, значит:
+        if req.path == '/index.html' and req.method == 'GET':
+            return self.checking(req)
         raise HTTPError(404, 'Not Found')
     
     def send_response(self, conn, res):
@@ -95,7 +92,7 @@ class MyHTTPServer:
         statusLine = f'HTTP/1.1 {res.status} {res.reason}\r\n'
         wfile.write(statusLine.encode('iso-8859-1'))
         
-        if res.hesders:
+        if res.headers:
             for (key, value) in res.headers:
                 headerLine = f'{key}: {value}\r\n'
                 wfile.write(headerLine.encode('iso-8859-1'))
@@ -120,23 +117,17 @@ class MyHTTPServer:
                        [('Content-Length', len(body))],
                        body)
         self.send_response(conn, res)
-
-    def handle_get_users(self, req):
-        # сделать что-то с этим запросом (пример):
+    
+    def checking(self, req):
         accept = req.headers.get('Accept')
         if 'text/html' in accept:
             contentType = 'text/html; charset=utf-8'
-            # организуем body
-        elif 'application/json' in accept:
-            contentType = 'application/json; charset=utf-8'
-            # по-другому организуем body
+            body = '<p>HELLO!<br>YOU ARE МОЛОДЕЦ!!!</p>'
         else:
-            # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/406
             return Response(406, 'Not Acceptable')
         body = body.encode('utf-8')
         headers = [('Content-Type', contentType),
                    ('Content-Length', len(body))]
-        # и вернуть ответ:
         return Response(200, 'OK', headers, body)
 
 class Request:
@@ -183,8 +174,8 @@ class HTTPError(Exception):
 
 if __name__ == "__main__":
     host = 'localhost'
-    port = '9090'
-    name = 'example.local'
+    port = 9090
+    name = 'localhost:9090'
     
     server = MyHTTPServer(host, port, name)
     try:
