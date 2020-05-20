@@ -46,25 +46,25 @@ class MyHTTPServer:
         headers = self.parse_headers(rfile)
         host = headers.get('Host')
         if not host:
-            raise Exception('Bad Request')
+            raise HTTPError(400, 'Bad request', 'Host header is missing')
         if host not in (self._serverName, f'{self._serverName}:{self._port}'):
-            raise Exception('Not Found')
+            raise HTTPError(404, 'Not found')
         return Request(method, target, ver, headers, rfile)
         
     def parse_request_line(self, rfile):
         raw = rfile.readline(MAX_LINE + 1)
         if len(raw) > MAX_LINE:
-            raise Exception('Request line is too long')
+            raise HTTPError(400, 'Bad request', 'Request line is too long')
         
         reqLine = str(raw, 'iso-8859-1')
         reqLine = reqLine.rstrip('\r\n')
         words = reqLine.split()
         if len(words) != 3:
-            raise Exception('Malformed request line')
+            raise HTTPError(400, 'Bad request','Malformed request line')
         
         method, target, ver = words
         if ver != 'HTTP/1.1':
-            raise Exception('Unexpected HTTP version')
+            raise HTTPError(505, 'HTTP Version Not Supported')
         return method, target, ver
     
     def parse_headers(self, rfile):
@@ -72,12 +72,12 @@ class MyHTTPServer:
         while True:
             line = rfile.readline(MAX_LINE + 1)
             if len(line) > MAX_LINE:
-                raise Exception('Header line is too long')
+                raise HTTPError(494, 'Request header too large')
             if line in (b'\r\n', b'\n', b''):
                 break
             headers.append(line)
             if len(headers) > MAX_HEADERS:
-                raise Exception('Too many headers')
+                raise HTTPError(494, 'Too many headers')
         
         sheaders = b''.join(headers).decode('iso-8859-1')
         return Parser().parsestr(sheaders)
@@ -88,7 +88,7 @@ class MyHTTPServer:
             return self.handle_get_users(req)
         
         # если ничего не вернулось, значит:
-        raise Exception('Not Found')
+        raise HTTPError(404, 'Not Found')
     
     def send_response(self, conn, res):
         wfile = conn.makefile('wb')
@@ -172,6 +172,13 @@ class Response:
         self.status = status
         self.reason = reason
         self.headers = headers
+        self.body = body
+
+class HTTPError(Exception):
+    def __init__(self, status, reason, body = None):
+        super()
+        self.status = status
+        self.reason = reason
         self.body = body
 
 if __name__ == "__main__":
