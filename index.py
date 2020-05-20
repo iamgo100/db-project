@@ -1,9 +1,9 @@
 import socket
 
-sock = socket.socket()
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(('localhost',9090))
 
-sock.send('hello, world!')
+sock.sendall(b'gogo')
 data = sock.recv(1024)
 
 sock.close()
