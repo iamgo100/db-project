@@ -3,6 +3,8 @@ from email.parser import Parser
 from functools import lru_cache
 from urllib.parse import parse_qs, urlparse
 
+import basemodule as bm
+
 MAX_LINE = 64*1024
 MAX_HEADERS = 100
 
@@ -82,11 +84,6 @@ class MyHTTPServer:
         sheaders = b''.join(headers).decode('iso-8859-1')
         return Parser().parsestr(sheaders)
     
-    def handle_request(self, req):
-        if req.path == '/index.html' and req.method == 'GET':
-            return self.checking(req)
-        raise HTTPError(404, 'Not Found')
-    
     def send_response(self, conn, res):
         wfile = conn.makefile('wb')
         statusLine = f'HTTP/1.1 {res.status} {res.reason}\r\n'
@@ -118,11 +115,16 @@ class MyHTTPServer:
                        body)
         self.send_response(conn, res)
     
-    def checking(self, req):
+    def handle_request(self, req):
+        if req.path == '/index.html' and req.method == 'GET':
+            return self.start(req)
+        raise HTTPError(404, 'Not Found')
+    
+    def start(self, req):
         accept = req.headers.get('Accept')
         if 'text/html' in accept:
             contentType = 'text/html; charset=utf-8'
-            body = '<p>HELLO!<br>YOU ARE МОЛОДЕЦ!!!</p>'
+            body = bm.start()
         else:
             return Response(406, 'Not Acceptable')
         body = body.encode('utf-8')
