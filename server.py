@@ -17,6 +17,6 @@ while True:
         data = conn.recv(1024) #recv - метод для чтения данных, принимает в арг получаемый размер данных
         if not data:
             break
-        conn.sendall(data.upper())
+        conn.sendall(data)
         
     conn.close()
