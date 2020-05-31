@@ -23,8 +23,6 @@
     6. Поиск по таблице "резюме" для представителей компаний
     7. Поиск по таблице "вакансии" для соискателей
 '''
-import sqlite3
-import re
 import basefunc as bf
 
 def alert(action):
@@ -40,7 +38,7 @@ def alert(action):
         print('Для введения нескольких параметров поиска для одного столбика,')
         print('разделяйте значения запятой и пробелом (", ")')
         print('Если хотите пропустить ввод данных столбца, нажмите Enter')
-    print('\n')
+    print('')
 
 def cycle(row):
     while True:
@@ -78,10 +76,10 @@ def add_user():
 def enter_user():
     columns = []; values = []
     alert('enter')
-    add_values_to_arrays('Логин: ', 'fname', columns, values)
-    add_values_to_arrays('Пароль: ', 'fname', columns, values)
+    add_values_to_arrays('Логин: ', 'login', columns, values)
+    add_values_to_arrays('Пароль: ', 'password', columns, values)
     add_values_to_arrays('Имя: ', 'fname', columns, values)
-    add_values_to_arrays('Фамилия: ', 'sname', columns, values)
+    add_values_to_arrays('Фамилия: ', 'lname', columns, values)
     add_values_to_arrays('Номер телефона: ', 'phone', columns, values)
     add_values_to_arrays('Город: ', 'city', columns, values)
     add_values_to_arrays('Статус (студент/выпускник): ', 'status', columns, values)
@@ -93,7 +91,7 @@ def add_resume():
     values.append(cycle('Профессия*: '))
     if_empty('Опыт работы в данной профессии: ', values)
     if_empty('Занятость (полная/частичная): ', values)
-    if_empty('Вам нужна практика для вуза?\n(да/нет)\n: ', values)
+    if_empty('Вам нужна практика для вуза?\n(да/нет)\n', values)
     return values
         
 def enter_resume():
@@ -102,7 +100,7 @@ def enter_resume():
     add_values_to_arrays('Профессия: ', 'profession', columns, values)
     add_values_to_arrays('Опыт работы в данной профессии: ', 'experience', columns, values)
     add_values_to_arrays('Занятость (полная/частичная): ', 'employment', columns, values)
-    add_values_to_arrays('Вам важна практика для вуза? (да/нет)\n: ', 'practice', columns, values)
+    add_values_to_arrays('Вам важна практика для вуза? (да/нет)\n', 'practice', columns, values)
     return [columns, values]
 
 def add_vacancy():
@@ -130,17 +128,17 @@ def add_company():
     alert('add')
     values.append(cycle('Сайт*: '))
     values.append(cycle('Электронная почта компании (для связи)*: '))
-    values.append(cycle('Предусмотрена ли практика для студентов?*\n(да/нет)\n'))
+    values.append(cycle('Предусмотрена ли практика для студентов?* (да/нет)\n'))
     return values
 
 def enter_company():
     columns = [];  values = []
     alert('enter')
-    add_values_to_arrays('Название: ', 'name', columns, values)
+    add_values_to_arrays('Название: ', 'login', columns, values)
     add_values_to_arrays('Пароль: ', 'password', columns, values)
     add_values_to_arrays('Сайт: ', 'site', columns, values)
     add_values_to_arrays('Электронная почта компании (для связи): ', 'email', columns, values)
-    add_values_to_arrays('Предусмотрена ли практика для студентов?\n(да/нет)\n', 'practice', columns, values)
+    add_values_to_arrays('Предусмотрена ли практика для студентов? (да/нет)\n', 'practice', columns, values)
     return [columns, values]
 
 def add_fil():
@@ -165,20 +163,20 @@ def search_resume(conn, cur):
     add_values_to_arrays('Профессия: ', 'profession', columns_r, values_r)
     add_values_to_arrays('Опыт работы: ', 'experience', columns_r, values_r)
     add_values_to_arrays('Занятость (полная/частичная): ', 'employment', columns_r, values_r)
-    add_values_to_arrays('Важна ли возможность практики? (да/нет)\n: ', 'practice', columns_r, values_r)
+    add_values_to_arrays('Важна ли возможность практики? (да/нет)\n', 'practice', columns_r, values_r)
     add_values_to_arrays('Город: ', 'city', columns_u, values_u)
     add_values_to_arrays('Статус (студент/выпускник): ', 'status', columns_u, values_u)
-    users = bf.search(conn, cur, 'users', [columns_u, values_u])
-    if users:
-        for user in users:
-            columns_r.append('login')
-            values_r.append(user[0])
-    elif columns_r and values_r:
-        resumes = bf.search(conn, cur, 'resumes', [columns_r, values_r])
+    users = bf.search(conn, cur, 'users', columns_u, values_u)
+    for user in users:
+        columns_r.append('login')
+        values_r.append(user[0])
+    if columns_r and values_r:
+        resumes = bf.search(conn, cur, 'resumes', columns_r, values_r)
         if resumes:
             for resume in resumes:
-                user = bf.search(conn, cur, 'users', ['login', resume[1]])
-                entry = (resume[0], user[2:], resume[2:])
+                user = bf.search(conn, cur, 'users', ['login'], [resume[1]])
+                user = user[0]
+                entry = (resume[0], user[2], user[3], user[4], user[5], user[6], resume[2], resume[3], resume[4], resume[5])
                 entries.append(entry)
     return entries
 
@@ -194,28 +192,24 @@ def search_vacancy(conn, cur):
     add_values_to_arrays('Зарплата: ', 'pay', columns_v, values_v)
     add_values_to_arrays('Опыт работы: ', 'experience', columns_v, values_v)
     add_values_to_arrays('Город: ', 'city', columns_c, values_c)
-    add_values_to_arrays('Важна ли возможность практики? (да/нет)\n: ', 'practice', columns_cm, values_cm)
-    if columns_cm and values_cm:
-        companies = bf.search(conn, cur, 'companies', [columns_cm, values_cm])
-    elif columns_c and values_c:
-        filiations = bf.search(conn, cur, 'filiations', [columns_c, values_c])
-        if companies:
-            for fil in filiations:
-                for comp in companies:
-                    if fil[1] == comp[0]:
-                        columns_v.append('idOfFil')
-                        values_v.append(fil[0])
-                        inf.append((fil[0], fil[2], comp[4]))
-                        break
-    elif columns_v and values_v:
-        vacancies = bf.search(conn, cur, 'vacancies', [columns_v, values_v])
-        if vacancies:
-            for vac in vacancies:
-                for i in inf:
-                    if vac[2] == i[0]:
-                        entry = (vac[:1], i[1], vac[3:], i[2])
-                        entries.append(entry)
-                        break
+    add_values_to_arrays('Важна ли возможность практики? (да/нет)\n', 'practice', columns_cm, values_cm)
+    companies = bf.search(conn, cur, 'companies', columns_cm, values_cm)
+    filiations = bf.search(conn, cur, 'filiations', columns_c, values_c)
+    for fil in filiations:
+        for comp in companies:
+            if fil[1] == comp[0]:
+                columns_v.append('idOfFil')
+                values_v.append(fil[0])
+                inf.append((fil[0], fil[2], comp[0], comp[2], comp[3], comp[4]))
+                break
+    vacancies = bf.search(conn, cur, 'vacancies', columns_v, values_v)
+    if vacancies:
+        for vac in vacancies:
+            for i in inf:
+                if vac[2] == i[0]:
+                    entry = (vac[0], vac[1], i[1], vac[3], vac[4], vac[5], i[2], i[3], i[4], i[5])
+                    entries.append(entry)
+                    break
     return entries
 
 if __name__ == '__main__':
