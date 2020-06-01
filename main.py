@@ -1,6 +1,7 @@
 import sqlite3
-import basefunc as bf #Подключение базовых функций
-import usersfunc as uf #Подключение пользовательских функций
+import basefunc as bf # Подключение базовых функций
+import usersfunc as uf # Подключение пользовательских функций
+import helpfunc as hf # Подключение вспомогательных функций
 
 class companies:
     name = 'companies'
@@ -8,27 +9,14 @@ class users:
     name = 'users'
 class filiations:
     name = 'filiations'
-    header = '| ID филиала | Название компании | Город |'
+    header = ['ID филиала', 'Название компании', '  Город  ']
 class vacancies:
     name = 'vacancies'
-    header = '''|    ID    |  Вакансия   |   ID    | Занятость | Зарплата | Опыт работы |
-| вакансии | (профессия) | филиала |           |          |             |'''
+    header = ['   ID   ', '   Вакансия    ', '  ID   ', 'Занятость', 'Зарплата', 'Опыт работы', '\n',
+              'вакансии', '  (профессия)  ', 'филиала', '         ', '        ', '           ']
 class resumes:
     name = 'resumes'
-    header = '| ID резюме | Логин соискателя | Профессия | Опыт работы | Занятость | Нужна ли практика |'
-
-def render(entries, header):
-    if not entries:
-        print('По вашему запросу ничего не найдено\n')
-    else:
-        print(header)
-        for entry in entries:
-            print(entry)
-        print('')
-        
-def search_id(conn, cur, table):
-    res = bf.search(conn, cur, table, [], [])
-    return len(res) + 1
+    header = ['ID резюме', 'Логин соискателя', '   Профессия   ', 'Опыт работы', 'Занятость', 'Нужна ли практика']
 
 def create_tables(conn):
     try:
@@ -79,6 +67,15 @@ def create_tables(conn):
         print(f'Ошибка создания таблиц: {e}')
         return False
 
+def view_fil(conn, cur, name):
+    res = bf.search(conn, cur, 'filiations', ['nameOfComp'], [name])
+    hf.render(res, filiations.header)
+    answer = input('Хотите редактировать данные филиалов? (да/нет)\n')
+    print('')
+    if answer == 'да':
+        return edit_fil(conn, cur, name)
+    return menu_for_comp(conn, cur, name)
+
 def edit_fil(conn, cur, name):
     print('Выберите действие:')
     print('1. Добавить новый филиал в реестр')
@@ -90,34 +87,35 @@ def edit_fil(conn, cur, name):
         num = input('Введите пункт меню: ')
         print('')
         if num == '1':
-            values = uf.add_fil()
-            values.insert(1, name)
-            bf.add(conn, cur, 'filiations', values)
-            edit_fil(conn, cur, name)
-            break
+            uf.add_fil(conn, cur, name)
+            return edit_fil(conn, cur, name)
         elif num == '2':
-            prKey = input('Введите ID филиала, который хотите изменить: ')
-            if not bf.search(conn, cur, 'filiations', ['id'], [prKey]):
-                print('Филиала с таким ID не существует\n')
-            else:
-                columns, values = uf.enter_fil()
-                bf.change(conn, cur, 'filiations', 'id', prKey, columns, values)
-            edit_fil(conn, cur, name)
-            break
+            uf.change_fil(conn, cur)
+            return edit_fil(conn, cur, name)
         elif num == '3':
-            prKey = input('Введите ID филиала, который хотите удалить: ')
-            if not bf.search(conn, cur, 'filiations', ['id'], [prKey]):
-                print('Филиала с таким ID не существует\n')
-            else:
-                bf.delete(conn, cur, 'filiations', 'id', prKey)
-            edit_fil(conn, cur, name)
-            break
+            uf.delete_fil(conn, cur)
+            return edit_fil(conn, cur, name)
         elif num == '4':
-            menu_for_comp(conn, cur, name)
-            break
+            return menu_for_comp(conn, cur, name)
         else:
             print('Такого пункта в меню нет.\n')
-    
+
+def view_vac(conn, cur, name):
+    res = hf.search_vacs_of_comp(conn, cur, name)
+    if res:
+        hf.render(res, vacancies.header)
+        answer = input('Хотите редактировать данные вакансий? (да/нет)\n')
+        print('')
+        if answer == 'да':
+            return edit_vac(conn, cur, name)
+    else:
+        print('У вас пока нет ни одного филиала, чтобы редактировать вакансии.')
+        answer = input('Хотите редактировать данные филиалов? (да/нет)\n')
+        print('')
+        if answer == 'да':
+            return edit_fil(conn, cur, name)
+    return menu_for_comp(conn, cur, name)
+
 def edit_vac(conn, cur, name):
     print('Выберите действие:')
     print('1. Добавить новую вакансию в реестр')
@@ -129,32 +127,16 @@ def edit_vac(conn, cur, name):
         num = input('Введите пункт меню: ')
         print('')
         if num == '1':
-            values = uf.add_vacancy()
-            id_ = search_id(conn, cur, 'vacancies')
-            values.insert(0, id_)
-            bf.add(conn, cur, 'vacancies', values)
-            edit_vac(conn, cur, name)
-            break
+            uf.add_vacancy(conn, cur)
+            return edit_vac(conn, cur, name)
         elif num == '2':
-            prKey = input('Введите ID вакансии, которую хотите изменить: ')
-            if not bf.search(conn, cur, 'vacancies', ['id'], [prKey]):
-                print('Вакансии с таким ID не существует')
-            else:
-                columns, values = uf.enter_vacancy()
-                bf.change(conn, cur, 'vacancies', 'id', prKey, columns, values)
-            edit_vac(conn, cur, name)
-            break
+            uf.change_vacancy(conn, cur)
+            return edit_vac(conn, cur, name)
         elif num == '3':
-            prKey = input('Введите ID вакансии, которую хотите удалить: ')
-            if not bf.search(conn, cur, 'vacancies', ['id'], [prKey]):
-                print('Вакансии с таким ID не существует')
-            else:
-                bf.delete(conn, cur, 'vacancies', 'id', prKey)
-            edit_vac(conn, cur, name)
-            break
+            uf.delete_vacancy(conn, cur)
+            return edit_vac(conn, cur, name)
         elif num == '4':
-            menu_for_comp(conn, cur, name)
-            break
+            return menu_for_comp(conn, cur, name)
         else:
             print('Такого пункта в меню нет.\n')
 
@@ -171,73 +153,47 @@ def menu_for_comp(conn, cur, name):
         num = input('Выберите пункт меню: ')
         print('')
         if num == '1':
-            res = uf.search_resume(conn, cur)
-            header = '''|   ID   | Имя | Фамилия |   Номер  | Город | Статус | Профессия |  Опыт  | Занятость | Нужна ли |
-| резюме |     |         | телефона |       |        |           | работы |           | практика |'''
-            render(res, header)
+            print('1. Поиск по данным вакансии')
+            print('2. Ввести параметры поиска')
+            while True:
+                num = input('Выберите пункт меню: ')
+                print('')
+                if num == '1':
+                    uf.search_by_vacancy(conn, cur, name, vacancies.header)
+                    break
+                elif num == '2':
+                    uf.search_resume(conn, cur)
+                    break
+                else:
+                    print('Такого пункта в меню нет.\n')
             answer = input('Вернутся в главное меню? (да/нет)\n')
             print('')
             if answer == 'нет':
-                print('До свидания!')
+                return print('До свидания!')
             else:
-                menu_for_comp(conn, cur, name)
-            break
+                return menu_for_comp(conn, cur, name)
         elif num == '2':
-            columns, values = uf.enter_company()
-            bf.change(conn, cur, 'companies', 'login', name, columns, values)
-            if 'login' in columns:
-                name = values[0]
-            menu_for_comp(conn, cur, name)
-            break
+            name = uf.change_company(conn, cur, name)
+            return menu_for_comp(conn, cur, name)
         elif num == '3':
             answer = input('Вы уверены, что хотите удалить аккаунт компании, а также все вакансии и филиалы, связанные с ней? (да/нет)\n')
             if answer == 'да':
                 bf.delete(conn, cur, 'companies', 'login', name)
-                print('До свидания!')
+                return print('До свидания!')
             else:
-                menu_for_comp(conn, cur, name)
-            break
+                return menu_for_comp(conn, cur, name)
         elif num == '4':
-            res = bf.search(conn, cur, 'filiations', ['nameOfComp'], [name])
-            render(res, filiations.header)
-            answer = input('Хотите редактировать данные филиалов? (да/нет)\n')
-            print('')
-            if answer == 'да':
-                edit_fil(conn, cur, name)
-            else:
-                menu_for_comp(conn, cur, name)
-            break
+            return view_fil(conn, cur, name)
         elif num == '5':
-            values = bf.search(conn, cur, 'filiations', ['nameOfComp'], [name])
-            if values:
-                columns = []
-                newValues = []
-                for val in values:
-                    columns.append('idOfFil')
-                    newValues.append(val[0])
-                res = bf.search(conn, cur, 'vacancies', columns, newValues)
-                render(res, vacancies.header)
-                answer = input('Хотите редактировать данные вакансий? (да/нет)\n')
-                print('')
-                if answer == 'да':
-                    edit_vac(conn, cur, name)
-            else:
-                print('У вас пока нет ни одного филиала, чтобы редактировать вакансии.')
-                answer = input('Хотите редактировать данные филиалов? (да/нет)\n')
-                print('')
-                if answer == 'да':
-                    edit_fil(conn, cur, name)
-            menu_for_comp(conn, cur, name)            
-            break
+            return view_vac(conn, cur, name)
         elif num == '6':
-            print('До свидания!')
-            break
+            return print('До свидания!')
         else:
             print('Такого пункта в меню нет\n')
 
 def view_resume(conn, cur, login):
     res = bf.search(conn, cur, 'resumes', ['login'], [login])
-    render(res, resumes.header)
+    uf.render(res, resumes.header)
     while True:
         print('Выберите дальнешее действие:')
         print('1. Изменить имеющееся резюме')
@@ -246,21 +202,11 @@ def view_resume(conn, cur, login):
         num = input('Введите пункт меню: ')
         print('')
         if num == '1':
-            prKey = input('Введите ID резюме, которое хотите изменить: ')
-            if not bf.search(conn, cur, 'resumes', ['id'], [prKey]):
-                print('Резюме с таким ID не существует\n')
-            else:
-                columns, values = uf.enter_resume()
-                bf.change(conn, cur, 'resumes', 'id', prKey, columns, values)
+            uf.change_resume(conn, cur)
         elif num == '2':
-            prKey = input('Введите ID резюме, которое хотите удалить: ')
-            if not bf.search(conn, cur, 'resumes', ['id'], [prKey]):
-                print('Резюме с таким ID не существует\n')
-            else:
-                bf.delete(conn, cur, 'resumes', 'id', prKey)
+            uf.delete_resume(conn, cur)
         elif num == '3':
-            menu_for_st(conn, cur, login)
-            break
+            return menu_for_st(conn, cur, login)
         else:
             print('Такого пункта в меню нет.\n')
 
@@ -277,61 +223,45 @@ def menu_for_st(conn, cur, login):
         num = input('Выберите пункт меню: ')
         print('')
         if num == '1':
-            res = uf.search_vacancy(conn, cur)
-            header = '''|    ID    | Профессия | Город | Занятость | Зарплата |  Опыт  | Название | Сайт | Электронная | Есть ли  |
-| вакансии |           |       |           |          | работы | компании |      |    почта    | практика |'''
-            render(res, header)
+            print('1. Поиск по данным резюме')
+            print('2. Ввести параметры поиска')
+            while True:
+                num = input('Выберите пункт меню: ')
+                print('')
+                if num == '1':
+                    uf.search_by_resume(conn, cur, login, resumes.header)
+                    break
+                elif num == '2':
+                    uf.search_vacancy(conn, cur)
+                    break
+                else:
+                    print('Такого пункта в меню нет.\n')
             answer = input('Вернутся в главное меню? (да/нет)\n')
             print('')
             if answer == 'нет':
-                print('До свидания!')
+                return print('До свидания!')
             else:
-                menu_for_st(conn, cur, login)
-            break
+                return menu_for_st(conn, cur, login)
         elif num == '2':
-            columns, values = uf.enter_user()
-            bf.change(conn, cur, 'users', 'login', login, columns, values)
-            if 'login' in columns:
-                login = values[0]
-            menu_for_st(conn, cur, login)
-            break
+            login = uf.change_user(conn, cur, login)
+            return menu_for_st(conn, cur, login)
         elif num == '3':
             answer = input('Вы уверены, что хотите удалить свой аккаунт? (да/нет)\n')
+            print('')
             if answer == 'да':
                 bf.delete(conn, cur, 'users', 'login', login)
-                print('До свидания!')
+                return print('До свидания!')
             else:
-                menu_for_st(conn, cur, login)
-            break
+                return menu_for_st(conn, cur, login)
         elif num == '4':
-            values = uf.add_resume()
-            id_ = search_id(conn, cur, 'resumes')
-            values.insert(0, id_)
-            values.insert(1, login)
-            bf.add(conn, cur, 'resumes', values)
-            menu_for_st(conn, cur, login)
-            break
+            uf.add_resume(conn, cur, login)
+            return menu_for_st(conn, cur, login)
         elif num == '5':
-            view_resume(conn, cur, login)
-            break
+            return view_resume(conn, cur, login)
         elif num == '6':
-            print('До свидания!')
-            break
+            return print('До свидания!')
         else:
             print('Такого пункта в меню нет.\n')
-
-def authorization(conn, cur, table):
-    while True:
-        print('Введите данные')
-        login = input('Логин: ')
-        password = input('Пароль: ')
-        if not login or not password:
-            print('Неверный ввод логина или пароля')
-        else:
-            if not bf.search(conn, cur, table.name, ['login', 'password'], [login, password]):
-                print('Неверный ввод логина или пароля')
-            else:
-                return login
 
 def enter(conn, cur, table):
     print('1. Авторизация')
@@ -341,53 +271,21 @@ def enter(conn, cur, table):
         num = input('Выберите пункт меню: ')
         print('')
         if num == '1':
-            login = authorization(conn, cur, table)
+            login = hf.authorization(conn, cur, table)
+            print('')
             if table.name == 'companies':
-                menu_for_comp(conn, cur, login)
-            else:
-                menu_for_st(conn, cur, login)
-            break
+                return menu_for_comp(conn, cur, login)
+            return menu_for_st(conn, cur, login)
         elif num == '2':
+            login, password = hf.registration(conn, cur, table)
+            print('')
             if table.name == 'companies':
-                while True:
-                    login = input('Введите название компании (далее оно будет использоваться как ваш логин для входа в систему): ')
-                    if not bf.search(conn, cur, 'companies', ['login'], [login]):
-                        while True:
-                            password = input('Придумайте восьмизначный пароль: ')
-                            if len(password) == 8:
-                                values = uf.add_company()
-                                values.insert(0, login)
-                                values.insert(1, password)
-                                bf.add(conn, cur, 'companies', values)
-                                menu_for_comp(conn, cur, login)
-                                break
-                            else:
-                                print('В пароле должно быть 8 символов!')
-                        break
-                    else:
-                        print('Компания с таким названием уже существует.')
-            else:
-                while True:
-                    login = input('Придумайте логин: ')
-                    if not bf.search(conn, cur, 'users', ['login'], [login]):
-                        while True:
-                            password = input('Придумайте восьмизначный пароль: ')
-                            if len(password) == 8:
-                                values = uf.add_user()
-                                values.insert(0, login)
-                                values.insert(1, password)
-                                bf.add(conn, cur, 'users', values)
-                                menu_for_st(conn, cur, login)
-                                break
-                            else:
-                                print('В пароле должно быть 8 символов!')
-                        break
-                    else:
-                        print('Пользователь с таким логином уже существует.')
-            break
+                uf.add_company(conn, cur, login, password)
+                return menu_for_comp(conn, cur, login)
+            uf.add_user(conn, cur, login, password)
+            return menu_for_st(conn, cur, login)
         elif num == '3':
-            print('До свидания!')
-            break
+            return print('До свидания!')
         else:
             print('Такого пункта в меню нет.\n')
 
@@ -400,14 +298,11 @@ def main_menu(conn, cur):
         num = input('Выберите пункт меню: ')
         print('\n')
         if num == '1':
-            enter(conn, cur, companies)
-            break
+            return enter(conn, cur, companies)
         elif num == '2':
-            enter(conn, cur, users)
-            break
+            return enter(conn, cur, users)
         elif num == '3':
-            print('До свидания!')
-            break
+            return print('До свидания!')
         else:
             print('Такого пункта в меню нет.\n')
 
@@ -426,4 +321,5 @@ def main():
     
     conn.close()
 
-main()
+if __name__ == '__main__':
+    main()
