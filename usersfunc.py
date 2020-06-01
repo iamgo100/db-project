@@ -195,6 +195,7 @@ def search_by_vacancy(conn, cur, name, header):
     elif len(vacancies) > 1:
         hf.render(vacancies, header)
         id_ = int(input('Введите ID вакансии, по которой хотите искать резюме: '))
+        print('')
         for vac in vacancies:
             if vac[0] == id_:
                 for fil in fils:
@@ -235,9 +236,10 @@ def search_by_resume(conn, cur, login, header):
     elif len(resumes) > 1:
         hf.render(resumes, header)
         id_ = int(input('Введите ID резюме, по которому хотите искать вакансии: '))
+        print('')
         for res in resumes:
             if res[0] == id_:
-                values_v = [resumes[0][2], resumes[0][3], resumes[0][4]]
+                values_v = [res[2], res[3], res[4]]
                 values_c = [user[0][5]]
                 values_cm = [res[-1]]
                 hf.making_vac_entries(conn, cur, columns_v, values_v, columns_c, values_c, columns_cm, values_cm)

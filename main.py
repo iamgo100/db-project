@@ -193,7 +193,7 @@ def menu_for_comp(conn, cur, name):
 
 def view_resume(conn, cur, login):
     res = bf.search(conn, cur, 'resumes', ['login'], [login])
-    uf.render(res, resumes.header)
+    hf.render(res, resumes.header)
     while True:
         print('Выберите дальнешее действие:')
         print('1. Изменить имеющееся резюме')

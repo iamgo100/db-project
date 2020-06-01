@@ -13,6 +13,7 @@ def add(conn, cur, table, values):
         params += '?, '
     query = f'INSERT INTO {table} VALUES {params}?)'
     try:
+        print(query,' and ', values)
         cur.execute(query, values)
     except sqlite3.Error as e:
         print(f'Ошибка добавления: {e}\n')
@@ -29,6 +30,7 @@ def change(conn, cur, table, prCol, prKey, columns, values):
         params += '?, '
     query = f'UPDATE {table} SET ({columnsStr}{columns[num - 1]}) = ({params}?) WHERE {prCol} = "{str(prKey)}"'
     try:
+        print(query)
         cur.execute(query, values)
     except sqlite3.Error as e:
         print(f'Ошибка изменения: {e}\n')
@@ -39,6 +41,7 @@ def change(conn, cur, table, prCol, prKey, columns, values):
 def delete(conn, cur, table, column, value):
     query = f'DELETE FROM {table} WHERE {column} = "{str(value)}"'
     try:
+        print(query)
         cur.execute(query)
     except sqlite3.Error as e:
         print(f'Ошибка удаления: {e}\n')
@@ -48,11 +51,25 @@ def delete(conn, cur, table, column, value):
         
 def search(conn, cur, table, columns, values):
     query = f'SELECT * FROM {table}'
+    n = values.count('-')
+    if n:
+        for i in range(n):
+            ind = values.index('-')
+            values.remove('-')
+            columns.pop(ind)
     if columns and values:
         query += ' WHERE ('
         num = min(len(columns),len(values))
         for i in range(num):
-            query += f'{columns[i]} = "{str(values[i])}"'
+            if columns[i] == 'practice':
+                if values[i] == 'да':
+                    query += f'{columns[i]} = "{str(values[i])}"'
+                else:
+                    continue
+            elif columns[i] == 'pay':
+                query += f'{columns[i]} >= "{str(values[i])}"'
+            else:
+                query += f'{columns[i]} = "{str(values[i])}"'
             if i != num - 1:
                 if columns[i] == columns[i+1]:
                     query += ' OR '
@@ -61,6 +78,7 @@ def search(conn, cur, table, columns, values):
             else:
                 query += f' OR {columns[num - 1]} = "-")'
     try:
+        print(query)
         res = cur.execute(query).fetchall()
     except sqlite3.Error as e:
         print(f'Ошибка поиска: {e}\n')
